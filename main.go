@@ -2,18 +2,19 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	_ "github.com/mattn/go-sqlite3"
 	"log"
 	"time"
 	"timeCounter/models"
+	"timeCounter/repositories"
 )
 
-var db *sql.DB
+var stateRepo repositories.StateRepo
 
 func init() {
-	var err error
-	db, err = sql.Open("sqlite3", "./db.sqlite?_journal=WAL")
+	db, err := sql.Open("sqlite3", "./db.sqlite?_journal=WAL")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -21,6 +22,10 @@ func init() {
 	if err = db.Ping(); err != nil {
 		log.Fatal(err)
 	}
+	stateRepo = repositories.StateRepoImpl{
+		Db: db,
+	}
+
 }
 
 func main() {
@@ -34,30 +39,37 @@ func main() {
 
 func start(c *gin.Context) {
 	currentTime := time.Now().Unix()
-	rows, err := db.Query("SELECT * FROM stats WHERE date($1, 'unixepoch') = date(StartTime, 'unixepoch')", currentTime)
+	result := stateRepo.Request(currentTime) //переменная result хранит указатель на ячейку памяти типа modules.State, где лежит результат выполнения метода request()
+	if result == nil {
+		stateRepo.Add(currentTime)
+		return
+	}
+	fmt.Print(result.StartTime, result.StopTime)
+	c.JSON(500, "Начало рабочего дня уже было установлено")
+	/*rows, err := db.Query("SELECT * FROM stats WHERE date($1, 'unixepoch') = date(StartTime, 'unixepoch')", currentTime)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer rows.Close()
+	defer rows.Close()*/
 
-	if rows.Next() != true {
+	/*if rows.Next() != true {
 		db.Exec("INSERT INTO stats (StartTime, StopTime) VALUES ($1, 0)", currentTime)
-		time.Now().Date()
 		c.Status(200)
 		return
 	}
 	c.JSON(500, "Начало рабочего дня уже было установлено")
-
+	*/
 }
 
 func stop(c *gin.Context) {
-	currentTime := time.Now().Unix() //.Add(1*time.Hour)
-	result, err := db.Exec("UPDATE stats SET StopTime=$1 WHERE date($1, 'unixepoch') = date(StartTime, 'unixepoch')", currentTime)
+	currentTime := time.Now().Unix()
+	rowsAffected := stateRepo.Update(currentTime)
+	/*result, err := db.Exec("UPDATE stats SET StopTime=$1 WHERE date($1, 'unixepoch') = date(StartTime, 'unixepoch')", currentTime)
 	if err != nil {
 		c.JSON(500, err.Error())
 		return
 	}
-	rowsAffected, err := result.RowsAffected()
+	rowsAffected, err := result.RowsAffected()*/
 	if rowsAffected != 1 {
 		c.JSON(500, "Что-то пошло не так")
 		return
@@ -66,24 +78,22 @@ func stop(c *gin.Context) {
 }
 
 func info(c *gin.Context) {
-	rows, err := db.Query("SELECT * FROM stats ORDER BY StartTime")
+
+	/*rows, err := db.Query("SELECT * FROM stats ORDER BY StartTime")
 	if err != nil {
 		c.JSON(500, err.Error())
 		return
 	}
-	defer rows.Close()
-	var sts []models.State
-	for rows.Next() {
-		var s models.State
-		rows.Scan(&s.StartTime, &s.StopTime)
-		sts = append(sts, s)
-	}
+	defer rows.Close()*/
+	var sts []*models.State
+	sts = stateRepo.Query()
+
 	if len(sts) == 0 {
 		c.JSON(404, "Нет данных")
 		return
 	}
 
-	m := map[string]models.State{}
+	m := map[string]*models.State{}
 	for i := 0; i < len(sts); i++ {
 		//a := strconv.Itoa(i) //конвертирование из int в string
 		a := time.Unix(sts[i].StartTime, 0).Format("2006-01-02")
