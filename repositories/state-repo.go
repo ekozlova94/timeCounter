@@ -8,7 +8,7 @@ import (
 
 type StateRepo interface {
 	Request(int64) *models.State
-	Add(int64)
+	Add(int64) error
 	Update(int64) int64
 	Query() []*models.State
 }
@@ -31,15 +31,18 @@ func (o StateRepoImpl) Request(t int64) *models.State {
 	return &s
 }
 
-func (o StateRepoImpl) Add(t int64) {
-	o.Db.Exec("INSERT INTO stats (StartTime, StopTime) VALUES ($1, 0)", t)
+func (o StateRepoImpl) Add(t int64) error {
+	_, err := o.Db.Exec("INSERT INTO stats (StartTime, StopTime) VALUES ($1, 0)", t)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (o StateRepoImpl) Update(t int64) int64 {
 	result, _ := o.Db.Exec("UPDATE stats SET StopTime=$1 WHERE date($1, 'unixepoch') = date(StartTime, 'unixepoch')", t)
 	rowsAffected, _ := result.RowsAffected()
 	return rowsAffected
-
 }
 
 func (o StateRepoImpl) Query() []*models.State {

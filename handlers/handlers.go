@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"database/sql"
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"log"
 	"time"
@@ -30,10 +29,18 @@ func Start(c *gin.Context) {
 	currentTime := time.Now().Unix()
 	result := stateRepo.Request(currentTime) //переменная result хранит указатель на ячейку памяти типа modules.State, где лежит результат выполнения метода request()
 	if result == nil {
-		stateRepo.Add(currentTime)
+		if stateRepo.Add(currentTime) != nil {
+			c.JSON(500, "Не удалось установить начало рабочего дня ")
+		} else {
+			var s = models.State{
+				StartTime: currentTime,
+				StopTime:  0,
+			}
+			c.JSON(200, s)
+		}
 		return
 	}
-	fmt.Print(result.StartTime, result.StopTime)
+	//fmt.Print(result.StartTime, result.StopTime)
 	c.JSON(500, "Начало рабочего дня уже было установлено")
 	/*rows, err := db.Query("SELECT * FROM stats WHERE date($1, 'unixepoch') = date(StartTime, 'unixepoch')", currentTime)
 	if err != nil {
@@ -52,19 +59,26 @@ func Start(c *gin.Context) {
 
 func Stop(c *gin.Context) {
 	currentTime := time.Now().Unix()
-	rowsAffected := stateRepo.Update(currentTime)
-	/*result, err := db.Exec("UPDATE stats SET StopTime=$1 WHERE date($1, 'unixepoch') = date(StartTime, 'unixepoch')", currentTime)
-	if err != nil {
-		c.JSON(500, err.Error())
+	result := stateRepo.Request(currentTime)
+	if result == nil {
+		c.JSON(500, "Начало рабочего дня не установлено")
 		return
 	}
-	rowsAffected, err := result.RowsAffected()*/
+	rowsAffected := stateRepo.Update(currentTime)
 	if rowsAffected != 1 {
 		c.JSON(500, "Что-то пошло не так")
 		return
 	}
-	c.Status(200)
+	result.StopTime = currentTime
+	c.JSON(200, result)
 }
+
+/*result, err := db.Exec("UPDATE stats SET StopTime=$1 WHERE date($1, 'unixepoch') = date(StartTime, 'unixepoch')", currentTime)
+if err != nil {
+	c.JSON(500, err.Error())
+	return
+}
+rowsAffected, err := result.RowsAffected()*/
 
 func Info(c *gin.Context) {
 
