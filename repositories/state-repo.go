@@ -18,7 +18,7 @@ type StateRepoImpl struct {
 }
 
 func (o StateRepoImpl) Request(t int64) *models.State {
-	rows, err := o.Db.Query("SELECT * FROM stats WHERE date($1, 'unixepoch') = date(StartTime, 'unixepoch')", t)
+	rows, err := o.Db.Query("SELECT StartTime, StopTime FROM stats WHERE date($1, 'unixepoch') = date(StartTime, 'unixepoch')", t)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -43,12 +43,15 @@ func (o StateRepoImpl) Update(t int64) int64 {
 }
 
 func (o StateRepoImpl) Query() []*models.State {
-	rows, _ := o.Db.Query("SELECT * FROM stats ORDER BY StartTime")
+	rows, _ := o.Db.Query("SELECT StartTime, StopTime FROM stats ORDER BY StartTime")
 	sts := make([]*models.State, 0)
 	for rows.Next() {
-		st := new(models.State)
-		rows.Scan(&st.StartTime, &st.StopTime)
-		sts = append(sts, st)
+		var st models.State
+		err := rows.Scan(&st.StartTime, &st.StopTime)
+		if err != nil {
+			log.Fatal(err)
+		}
+		sts = append(sts, &st)
 	}
 	return sts
 }
