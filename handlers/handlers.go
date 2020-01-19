@@ -29,49 +29,32 @@ func init() {
 
 func Start(c *gin.Context) {
 	currentTime := time.Now().Unix()
-	result := stateRepo.Request(currentTime) //переменная result хранит указатель на ячейку памяти типа modules.State, где лежит результат выполнения метода request()
+	result := stateRepo.GetByDate(currentTime)
 	if result == nil {
-		if stateRepo.Add(currentTime) != nil {
-			c.JSON(500, "Не удалось установить начало рабочего дня ")
-		} else {
-			var s = models.State{
-				StartTime: currentTime,
-				StopTime:  0,
-			}
-			c.JSON(200, s)
+		var s models.State
+		s.StartTime = currentTime
+		s.StopTime = 0
+		err := stateRepo.Save(&s)
+		if err != nil {
+			c.JSON(500, "Не удалось установить начало рабочего дня")
 		}
 		return
 	}
-	//fmt.Print(result.StartTime, result.StopTime)
-	c.JSON(500, "Начало рабочего дня уже было установлено")
-	/*rows, err := db.Query("SELECT * FROM stats WHERE date($1, 'unixepoch') = date(StartTime, 'unixepoch')", currentTime)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer rows.Close()*/
-
-	/*if rows.Next() != true {
-		db.Exec("INSERT INTO stats (StartTime, StopTime) VALUES ($1, 0)", currentTime)
-		c.Status(200)
-		return
-	}
-	c.JSON(500, "Начало рабочего дня уже было установлено")
-	*/
+	c.JSON(500, "Начало рабочего дня уже установлено")
 }
 
 func Stop(c *gin.Context) {
 	currentTime := time.Now().Unix()
-	result := stateRepo.Request(currentTime)
+	result := stateRepo.GetByDate(currentTime)
 	if result == nil {
 		c.JSON(500, "Начало рабочего дня не установлено")
 		return
 	}
-	rowsAffected := stateRepo.UpdateStopTime(currentTime)
-	if rowsAffected != 1 {
-		c.JSON(500, "Что-то пошло не так")
-		return
-	}
 	result.StopTime = currentTime
+	err := stateRepo.Save(result)
+	if err != nil {
+		c.JSON(500, err.Error())
+	}
 	c.JSON(200, result)
 }
 
@@ -83,13 +66,6 @@ if err != nil {
 rowsAffected, err := result.RowsAffected()*/
 
 func Info(c *gin.Context) {
-
-	/*rows, err := db.Query("SELECT * FROM stats ORDER BY StartTime")
-	if err != nil {
-		c.JSON(500, err.Error())
-		return
-	}
-	defer rows.Close()*/
 	var sts []*models.State
 	sts = stateRepo.Query()
 
@@ -97,7 +73,6 @@ func Info(c *gin.Context) {
 		c.JSON(404, "Нет данных")
 		return
 	}
-
 	m := map[string]*models.State{}
 	for i := 0; i < len(sts); i++ {
 		//a := strconv.Itoa(i) //конвертирование из int в string
@@ -117,8 +92,8 @@ func Edit(c *gin.Context) {
 	if err != nil {
 		fmt.Println(err)
 	}
-	dateEdit := t.Unix()                  // преобразование из типа Time в Unix
-	result := stateRepo.Request(dateEdit) //переменная result хранит указатель на ячейку памяти типа modules.State, где лежит результат выполнения метода request() - список найденных записей
+	dateEdit := t.Unix()                    // преобразование из типа Time в Unix
+	result := stateRepo.GetByDate(dateEdit) //переменная result хранит указатель на ячейку памяти типа modules.State, где лежит результат выполнения метода request() - список найденных записей
 	if result == nil {
 		c.JSON(500, "Запись не найдена")
 		return
@@ -126,26 +101,30 @@ func Edit(c *gin.Context) {
 	startTime, err1 := strconv.Atoi(c.Query("startTime")) // преобразование из string в int
 	stopTime, err2 := strconv.Atoi(c.Query("stopTime"))   // преобразование из string в  int
 	if err1 != nil && err2 != nil {
-		c.JSON(500, "Параметры не заданы")
+		c.JSON(500, "Не указано ни начало, ни окончание рабочего дня. Редактирование невозможно")
 		return
 	}
 	if err1 == nil {
-		rowsAffectedStartTime := stateRepo.UpdateStartTime(int64(startTime))
+		/*rowsAffectedStartTime := stateRepo.UpdateStartTime(int64(startTime))
 		if rowsAffectedStartTime != 1 {
 			c.JSON(500, "Значение startTime не обновлено")
 			return
-		}
+		}*/
+		result.StartTime = int64(startTime)
 	}
 	if err2 == nil {
-		rowsAffectedStopTime := stateRepo.UpdateStopTime(int64(stopTime))
+		/*rowsAffectedStopTime := stateRepo.UpdateStopTime(int64(stopTime))
 		if rowsAffectedStopTime != 1 {
 			c.JSON(500, "Значение stopTime не обновлено")
 			return
-		}
+		}*/
+		result.StopTime = int64(stopTime)
 	}
-
-	m := stateRepo.Request(dateEdit)
-	c.JSON(200, m)
+	err = stateRepo.Save(result)
+	if err != nil {
+		c.JSON(500, err.Error())
+	}
+	c.JSON(200, result)
 }
 
 /*
