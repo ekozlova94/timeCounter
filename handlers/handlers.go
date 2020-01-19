@@ -2,8 +2,10 @@ package handlers
 
 import (
 	"database/sql"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"log"
+	"strconv"
 	"time"
 	"timeCounter/models"
 	"timeCounter/repositories"
@@ -64,7 +66,7 @@ func Stop(c *gin.Context) {
 		c.JSON(500, "Начало рабочего дня не установлено")
 		return
 	}
-	rowsAffected := stateRepo.Update(currentTime)
+	rowsAffected := stateRepo.UpdateStopTime(currentTime)
 	if rowsAffected != 1 {
 		c.JSON(500, "Что-то пошло не так")
 		return
@@ -102,6 +104,47 @@ func Info(c *gin.Context) {
 		a := time.Unix(sts[i].StartTime, 0).Format("2006-01-02")
 		m[a] = sts[i]
 	}
+	c.JSON(200, m)
+}
+
+func Edit(c *gin.Context) {
+	date := c.Query("date")
+	if date == "" {
+		c.JSON(500, "Дата не найдена")
+		return
+	}
+	t, err := time.Parse("2006-01-02", date) // преобразование из формата 2006-01-02 в типа Time
+	if err != nil {
+		fmt.Println(err)
+	}
+	dateEdit := t.Unix()                  // преобразование из типа Time в Unix
+	result := stateRepo.Request(dateEdit) //переменная result хранит указатель на ячейку памяти типа modules.State, где лежит результат выполнения метода request() - список найденных записей
+	if result == nil {
+		c.JSON(500, "Запись не найдена")
+		return
+	}
+	startTime, err1 := strconv.Atoi(c.Query("startTime")) // преобразование из string в int
+	stopTime, err2 := strconv.Atoi(c.Query("stopTime"))   // преобразование из string в  int
+	if err1 != nil && err2 != nil {
+		c.JSON(500, "Параметры не заданы")
+		return
+	}
+	if err1 == nil {
+		rowsAffectedStartTime := stateRepo.UpdateStartTime(int64(startTime))
+		if rowsAffectedStartTime != 1 {
+			c.JSON(500, "Значение startTime не обновлено")
+			return
+		}
+	}
+	if err2 == nil {
+		rowsAffectedStopTime := stateRepo.UpdateStopTime(int64(stopTime))
+		if rowsAffectedStopTime != 1 {
+			c.JSON(500, "Значение stopTime не обновлено")
+			return
+		}
+	}
+
+	m := stateRepo.Request(dateEdit)
 	c.JSON(200, m)
 }
 

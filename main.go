@@ -11,6 +11,7 @@ func main() {
 	r := gin.Default()
 	r.POST("/api/start", handlers.Start)
 	r.POST("/api/stop", handlers.Stop)
+	r.POST("/api/edit", handlers.Edit)
 	r.GET("/api/info", handlers.Info)
 	if err := r.Run(); err != nil { // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
 		log.Fatal(err)
