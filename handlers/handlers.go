@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"database/sql"
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"log"
 	"strconv"
@@ -30,7 +29,10 @@ func init() {
 
 func Start(c *gin.Context) {
 	currentTime := time.Now().Unix()
-	result := stateRepo.GetByDate(currentTime)
+	result, err := stateRepo.GetByDate(currentTime)
+	if err != nil {
+		c.JSON(500, err.Error())
+	}
 	if result == nil {
 		var s models.State
 		s.StartTime = currentTime
@@ -46,13 +48,16 @@ func Start(c *gin.Context) {
 
 func Stop(c *gin.Context) {
 	currentTime := time.Now().Unix()
-	result := stateRepo.GetByDate(currentTime)
+	result, err := stateRepo.GetByDate(currentTime)
+	if err != nil {
+		c.JSON(500, err.Error())
+	}
 	if result == nil {
 		c.JSON(500, "Начало рабочего дня не установлено")
 		return
 	}
 	result.StopTime = currentTime
-	err := stateRepo.Save(result)
+	err = stateRepo.Save(result)
 	if err != nil {
 		c.JSON(500, err.Error())
 	}
@@ -60,32 +65,77 @@ func Stop(c *gin.Context) {
 }
 
 func Info(c *gin.Context) {
-	var sts []*models.State
-	sts = stateRepo.Query()
+	dateFrom := c.Query("from")
+	dateTo := c.Query("to")
 
+	if dateFrom != "" && dateTo != "" {
+		dateFromUnix, err := converting(dateFrom)
+		if err != nil {
+			c.JSON(400, err.Error())
+			return
+		}
+		dateToUnix, err := converting(dateTo)
+		if err != nil {
+			c.JSON(400, err.Error())
+			return
+		}
+
+		sts, err := stateRepo.GetByDateFromTo(dateFromUnix, dateToUnix)
+		if err != nil {
+			c.JSON(500, err.Error())
+			return
+		}
+
+		if len(sts) == 0 {
+			c.JSON(404, "Нет данных")
+			return
+		}
+		var m []*forms.InfoResponseForm
+
+		for i := 0; i < len(sts); i++ {
+			m = append(m, forms.NewInfoResponseForm(sts[i]))
+		}
+		c.JSON(200, m)
+		return
+	}
+	sts, err := stateRepo.GetAll()
+	if err != nil {
+		c.JSON(500, err.Error())
+		return
+	}
 	if len(sts) == 0 {
 		c.JSON(404, "Нет данных")
 		return
 	}
 	var m []*forms.InfoResponseForm
+
 	for i := 0; i < len(sts); i++ {
 		m = append(m, forms.NewInfoResponseForm(sts[i]))
 	}
 	c.JSON(200, m)
 }
-
+func converting(date string) (int64, error) {
+	t, err := time.Parse("2006-01-02", date) // преобразование из формата 2006-01-02 в типа Time
+	if err != nil {
+		return 0, err
+	}
+	return t.Unix(), nil // преобразование из типа Time в Unix
+}
 func Edit(c *gin.Context) {
 	date := c.Query("date")
 	if date == "" {
 		c.JSON(500, "Дата не найдена")
 		return
 	}
-	t, err := time.Parse("2006-01-02", date) // преобразование из формата 2006-01-02 в типа Time
+	dateUnix, err := converting(date)
 	if err != nil {
-		fmt.Println(err)
+		c.JSON(400, err.Error())
+		return
 	}
-	dateEdit := t.Unix()                    // преобразование из типа Time в Unix
-	result := stateRepo.GetByDate(dateEdit) //переменная result хранит указатель на ячейку памяти типа modules.State, где лежит результат выполнения метода request() - список найденных записей
+	result, err := stateRepo.GetByDate(dateUnix)
+	if err != nil {
+		c.JSON(500, err.Error())
+	}
 	if result == nil {
 		c.JSON(500, "Запись не найдена")
 		return
@@ -105,6 +155,7 @@ func Edit(c *gin.Context) {
 	err = stateRepo.Save(result)
 	if err != nil {
 		c.JSON(500, err.Error())
+		return
 	}
 	c.JSON(200, result)
 }
