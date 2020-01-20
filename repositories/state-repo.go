@@ -9,8 +9,6 @@ import (
 type StateRepo interface {
 	GetByDate(int64) *models.State
 	Add(int64) error
-	/*UpdateStopTime(int64) int64
-	UpdateStartTime(int64) int64*/
 	Query() []*models.State
 	Save(*models.State) error
 }
@@ -37,33 +35,12 @@ func (o StateRepoImpl) GetByDate(t int64) *models.State {
 	return &s
 }
 
-/*
-func (o StateRepoImpl) Add(t int64) error {
-	_, err := o.Db.Exec("INSERT INTO stats (StartTime, StopTime) VALUES ($1, 0)", t)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (o StateRepoImpl) UpdateStartTime(t int64) int64 {
-	result, _ := o.Db.Exec("UPDATE stats SET StartTime=$1 WHERE date($1, 'unixepoch') = date(StartTime, 'unixepoch')", t)
-	rowsAffected, _ := result.RowsAffected()
-	return rowsAffected
-}
-
-func (o StateRepoImpl) UpdateStopTime(t int64) int64 {
-	result, _ := o.Db.Exec("UPDATE stats SET StopTime=$1 WHERE date($1, 'unixepoch') = date(StartTime, 'unixepoch')", t)
-	rowsAffected, _ := result.RowsAffected()
-	return rowsAffected
-}*/
-
 func (o StateRepoImpl) Query() []*models.State {
-	rows, _ := o.Db.Query("SELECT StartTime, StopTime FROM stats ORDER BY StartTime")
-	sts := make([]*models.State, 0)
+	rows, _ := o.Db.Query("SELECT ID, StartTime, StopTime FROM stats")
+	var sts = make([]*models.State, 0)
 	for rows.Next() {
 		var st models.State
-		err := rows.Scan(&st.StartTime, &st.StopTime)
+		err := rows.Scan(&st.Id, &st.StartTime, &st.StopTime)
 		if err != nil {
 			log.Fatal(err)
 		}

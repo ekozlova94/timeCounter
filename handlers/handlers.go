@@ -7,6 +7,7 @@ import (
 	"log"
 	"strconv"
 	"time"
+	"timeCounter/forms"
 	"timeCounter/models"
 	"timeCounter/repositories"
 )
@@ -58,13 +59,6 @@ func Stop(c *gin.Context) {
 	c.JSON(200, result)
 }
 
-/*result, err := db.Exec("UPDATE stats SET StopTime=$1 WHERE date($1, 'unixepoch') = date(StartTime, 'unixepoch')", currentTime)
-if err != nil {
-	c.JSON(500, err.Error())
-	return
-}
-rowsAffected, err := result.RowsAffected()*/
-
 func Info(c *gin.Context) {
 	var sts []*models.State
 	sts = stateRepo.Query()
@@ -73,11 +67,9 @@ func Info(c *gin.Context) {
 		c.JSON(404, "Нет данных")
 		return
 	}
-	m := map[string]*models.State{}
+	var m []*forms.InfoResponseForm
 	for i := 0; i < len(sts); i++ {
-		//a := strconv.Itoa(i) //конвертирование из int в string
-		a := time.Unix(sts[i].StartTime, 0).Format("2006-01-02")
-		m[a] = sts[i]
+		m = append(m, forms.NewInfoResponseForm(sts[i]))
 	}
 	c.JSON(200, m)
 }
@@ -105,19 +97,9 @@ func Edit(c *gin.Context) {
 		return
 	}
 	if err1 == nil {
-		/*rowsAffectedStartTime := stateRepo.UpdateStartTime(int64(startTime))
-		if rowsAffectedStartTime != 1 {
-			c.JSON(500, "Значение startTime не обновлено")
-			return
-		}*/
 		result.StartTime = int64(startTime)
 	}
 	if err2 == nil {
-		/*rowsAffectedStopTime := stateRepo.UpdateStopTime(int64(stopTime))
-		if rowsAffectedStopTime != 1 {
-			c.JSON(500, "Значение stopTime не обновлено")
-			return
-		}*/
 		result.StopTime = int64(stopTime)
 	}
 	err = stateRepo.Save(result)
@@ -126,18 +108,3 @@ func Edit(c *gin.Context) {
 	}
 	c.JSON(200, result)
 }
-
-/*
-fmt.Println(fmtDuration(1*time.Hour + 13*time.Minute + 23*time.Second + 10*time.Millisecond))
-
-func fmtDuration(d time.Duration) string {
-	d = d.Round(time.Millisecond)
-	h := d / time.Hour
-	d -= h * time.Hour
-	m := d / time.Minute
-	d -= m * time.Minute
-	s := d / time.Second
-	d -= s * time.Second
-	ms := d / time.Millisecond
-	return fmt.Sprintf("%02dh %02dm %02ds %03dms", h, m, s, ms)
-}*/
