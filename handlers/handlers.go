@@ -65,40 +65,26 @@ func Stop(c *gin.Context) {
 }
 
 func Info(c *gin.Context) {
-	dateFrom := c.Query("from")
-	dateTo := c.Query("to")
-
-	if dateFrom != "" && dateTo != "" {
-		dateFromUnix, err := converting(dateFrom)
+	var dateFromUnix int64 = -1
+	var dateToUnix int64 = -1
+	var err error
+	if dateFrom := c.Query("from"); dateFrom != "" {
+		dateFromUnix, err = converting(dateFrom)
 		if err != nil {
 			c.JSON(400, err.Error())
 			return
 		}
-		dateToUnix, err := converting(dateTo)
-		if err != nil {
-			c.JSON(400, err.Error())
-			return
-		}
-
-		sts, err := stateRepo.GetByDateFromTo(dateFromUnix, dateToUnix)
-		if err != nil {
-			c.JSON(500, err.Error())
-			return
-		}
-
-		if len(sts) == 0 {
-			c.JSON(404, "Нет данных")
-			return
-		}
-		var m []*forms.InfoResponseForm
-
-		for i := 0; i < len(sts); i++ {
-			m = append(m, forms.NewInfoResponseForm(sts[i]))
-		}
-		c.JSON(200, m)
-		return
 	}
-	sts, err := stateRepo.GetAll()
+	if dateTo := c.Query("to"); dateTo != "" {
+		dateToUnix, err = converting(dateTo)
+		if err != nil {
+			c.JSON(400, err.Error())
+			return
+		}
+	}
+
+	var sts []*models.State
+	sts, err = selectData(dateFromUnix, dateToUnix)
 	if err != nil {
 		c.JSON(500, err.Error())
 		return
@@ -121,6 +107,20 @@ func converting(date string) (int64, error) {
 	}
 	return t.Unix(), nil // преобразование из типа Time в Unix
 }
+
+func selectData(dateFromUnix int64, dateToUnix int64) ([]*models.State, error) {
+	if dateFromUnix != -1 && dateToUnix != -1 {
+		return stateRepo.GetByDateFromTo(dateFromUnix, dateToUnix)
+	}
+	if dateToUnix != -1 {
+		return stateRepo.GetByDateTo(dateToUnix)
+	}
+	if dateFromUnix != -1 {
+		return stateRepo.GetByDateFrom(dateFromUnix)
+	}
+	return stateRepo.GetAll()
+}
+
 func Edit(c *gin.Context) {
 	date := c.Query("date")
 	if date == "" {

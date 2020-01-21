@@ -9,6 +9,8 @@ import (
 type StateRepo interface {
 	GetByDate(int64) (*models.State, error)
 	GetByDateFromTo(int64, int64) ([]*models.State, error)
+	GetByDateFrom(int64) ([]*models.State, error)
+	GetByDateTo(int64) ([]*models.State, error)
 	GetAll() ([]*models.State, error)
 	Save(*models.State) error
 }
@@ -40,7 +42,23 @@ func (o StateRepoImpl) GetByDate(t int64) (*models.State, error) {
 }
 
 func (o StateRepoImpl) GetByDateFromTo(dateFrom int64, dateTo int64) ([]*models.State, error) {
-	rows, err := o.Db.Query("SELECT Id, StartTime, StopTime FROM stats WHERE date(StartTime, 'unixepoch') BETWEEN date($1, 'unixepoch') AND date($2, 'unixepoch');", dateFrom, dateTo)
+	rows, err := o.Db.Query("SELECT Id, StartTime, StopTime FROM stats WHERE date(StartTime, 'unixepoch') BETWEEN date($1, 'unixepoch') AND date($2, 'unixepoch')", dateFrom, dateTo)
+	if err != nil {
+		return nil, err
+	}
+	return extractDataFromRows(rows)
+}
+
+func (o StateRepoImpl) GetByDateFrom(dateFrom int64) ([]*models.State, error) {
+	rows, err := o.Db.Query("SELECT Id, StartTime, StopTime FROM stats WHERE date(StartTime, 'unixepoch') >= date($1, 'unixepoch')", dateFrom)
+	if err != nil {
+		return nil, err
+	}
+	return extractDataFromRows(rows)
+}
+
+func (o StateRepoImpl) GetByDateTo(dateTo int64) ([]*models.State, error) {
+	rows, err := o.Db.Query("SELECT Id, StartTime, StopTime FROM stats WHERE date(StartTime, 'unixepoch') >= date($1, 'unixepoch')", dateTo)
 	if err != nil {
 		return nil, err
 	}
