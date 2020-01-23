@@ -71,6 +71,16 @@ func BreakStop(c *gin.Context) {
 	c.JSON(200, result)
 }
 
+func Today(c *gin.Context) {
+	currentTime := time.Now().Unix()
+	result, err := Test.Today(currentTime)
+	if err != nil {
+		c.JSON(500, err.Error())
+		return
+	}
+	c.JSON(200, result)
+}
+
 func Info(c *gin.Context) {
 	var dateFromUnix int64 = -1
 	var dateToUnix int64 = -1

@@ -78,6 +78,17 @@ func (t TimeCounterService) BreakStop(currentTime int64) (*models.State, error) 
 	return result, nil
 }
 
+func (t TimeCounterService) Today(currentTime int64) (*models.State, error) {
+	result, err := t.Repo.GetByDate(currentTime)
+	if err != nil {
+		return nil, err
+	}
+	if result == nil {
+		return nil, errors.New("записи на сегодня нет")
+	}
+	return result, nil
+}
+
 func (t TimeCounterService) Info(dateFromUnix int64, dateToUnix int64) ([]*models.State, error) {
 	if dateFromUnix != -1 && dateToUnix != -1 {
 		return t.Repo.GetByDateFromTo(dateFromUnix, dateToUnix)

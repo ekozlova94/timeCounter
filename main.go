@@ -13,6 +13,7 @@ func main() {
 	r.POST("/api/stop", handlers.Stop)
 	r.POST("/api/edit", handlers.Edit)
 	r.GET("/api/info", handlers.Info)
+	r.GET("/api/today", handlers.Today)
 	r.POST("/api/start-break", handlers.BreakStart)
 	r.POST("/api/stop-break", handlers.BreakStop)
 	r.POST("/api/edit-break", handlers.EditBreak)
