@@ -9,95 +9,61 @@ import (
 	"timeCounter/forms"
 	"timeCounter/models"
 	"timeCounter/repositories"
+	"timeCounter/services"
 )
 
-var stateRepo repositories.StateRepo
+var Test services.TimeCounterService
 
 func init() {
 	db, err := sql.Open("sqlite3", "./db.sqlite?_journal=WAL")
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	if err = db.Ping(); err != nil {
 		log.Fatal(err)
 	}
-	stateRepo = repositories.StateRepoImpl{
+
+	stateRepo := repositories.StateRepoImpl{
 		Db: db,
+	}
+	Test = services.TimeCounterService{
+		Repo: stateRepo,
 	}
 }
 
 func Start(c *gin.Context) {
 	currentTime := time.Now().Unix()
-	result, err := stateRepo.GetByDate(currentTime)
+	result, err := Test.Start(currentTime)
 	if err != nil {
 		c.JSON(500, err.Error())
-	}
-	if result == nil {
-		var s models.State
-		s.StartTime = currentTime
-		err := stateRepo.Save(&s)
-		if err != nil {
-			c.JSON(500, "Не удалось установить начало рабочего дня")
-		}
 		return
 	}
-	c.JSON(500, "Начало рабочего дня уже установлено")
+	c.JSON(200, result)
 }
 
 func BreakStart(c *gin.Context) {
 	currentTime := time.Now().Unix()
-	result, err := stateRepo.GetByDate(currentTime)
+	result, err := Test.BreakStart(currentTime)
 	if err != nil {
 		c.JSON(500, err.Error())
 		return
 	}
-	if result != nil && result.BreakStartTime == 0 {
-		result.BreakStartTime = currentTime
-		err := stateRepo.Save(result)
-		if err != nil {
-			c.JSON(500, "Не удалось установить начало перерыва")
-		}
-		return
-	}
-	if result != nil && result.BreakStartTime != 0 {
-		c.JSON(500, "Начало перерыва уже установлено")
-		return
-	}
-	c.JSON(500, "Начало рабочего дня не установлено")
+	c.JSON(200, result)
 }
 
 func Stop(c *gin.Context) {
 	currentTime := time.Now().Unix()
-	result, err := stateRepo.GetByDate(currentTime)
+	result, err := Test.Stop(currentTime)
 	if err != nil {
 		c.JSON(500, err.Error())
-	}
-	if result == nil {
-		c.JSON(500, "Начало рабочего дня не установлено")
 		return
-	}
-	result.StopTime = currentTime
-	err = stateRepo.Save(result)
-	if err != nil {
-		c.JSON(500, err.Error())
 	}
 	c.JSON(200, result)
 }
 
 func BreakStop(c *gin.Context) {
 	currentTime := time.Now().Unix()
-	result, err := stateRepo.GetByDate(currentTime)
-	if err != nil {
-		c.JSON(500, err.Error())
-		return
-	}
-	if result == nil {
-		c.JSON(500, "Начало рабочего дня не установлено")
-		return
-	}
-	result.BreakStopTime = currentTime
-	err = stateRepo.Save(result)
+	result, err := Test.BreakStop(currentTime)
 	if err != nil {
 		c.JSON(500, err.Error())
 		return
@@ -123,9 +89,8 @@ func Info(c *gin.Context) {
 			return
 		}
 	}
-
 	var sts []*models.State
-	sts, err = selectData(dateFromUnix, dateToUnix)
+	sts, err = Test.Info(dateFromUnix, dateToUnix)
 	if err != nil {
 		c.JSON(500, err.Error())
 		return
@@ -135,7 +100,6 @@ func Info(c *gin.Context) {
 		return
 	}
 	var m []*forms.InfoResponseForm
-
 	for i := 0; i < len(sts); i++ {
 		m = append(m, forms.NewInfoResponseForm(sts[i]))
 	}
@@ -143,28 +107,27 @@ func Info(c *gin.Context) {
 }
 
 func Edit(c *gin.Context) {
-	result, err := dateEdit(c.Query("date"))
-	if err != nil {
-		c.JSON(500, err.Error())
-		return
-	}
-	if result == nil {
+	date := c.Query("date")
+	if date == "" {
 		c.JSON(500, "Запись не найдена")
 		return
 	}
-	startTime, err1 := strconv.Atoi(c.Query("startTime")) // преобразование из string в int
-	stopTime, err2 := strconv.Atoi(c.Query("stopTime"))
-	if err1 != nil && err2 != nil {
-		c.JSON(500, "Не указано ни начало, ни окончание рабочего дня. Редактирование невозможно")
+	dateUnix, err := converting(date)
+	if err != nil {
+		c.JSON(400, err.Error())
 		return
 	}
-	if err1 == nil {
-		result.StartTime = int64(startTime)
+	startTime, err1 := strconv.Atoi(c.Query("startTime")) // преобразование из string в int
+	if err1 != nil {
+		c.JSON(400, err1.Error())
+		return
 	}
-	if err2 == nil {
-		result.StopTime = int64(stopTime)
+	stopTime, err2 := strconv.Atoi(c.Query("stopTime"))
+	if err2 != nil {
+		c.JSON(400, err2.Error())
+		return
 	}
-	err = stateRepo.Save(result)
+	result, err := Test.Edit(dateUnix, int64(startTime), int64(stopTime))
 	if err != nil {
 		c.JSON(500, err.Error())
 		return
@@ -173,28 +136,27 @@ func Edit(c *gin.Context) {
 }
 
 func EditBreak(c *gin.Context) {
-	result, err := dateEdit(c.Query("date"))
-	if err != nil {
-		c.JSON(500, err.Error())
-		return
-	}
-	if result == nil {
+	date := c.Query("date")
+	if date == "" {
 		c.JSON(500, "Запись не найдена")
 		return
 	}
-	breakStartTime, err1 := strconv.Atoi(c.Query("breakStartTime")) // преобразование из string в int
-	breakStopTime, err2 := strconv.Atoi(c.Query("breakStopTime"))
-	if err1 != nil && err2 != nil {
-		c.JSON(500, "Не указано ни начало, ни окончание перерыва. Редактирование невозможно")
+	dateUnix, err := converting(date)
+	if err != nil {
+		c.JSON(400, err.Error())
 		return
 	}
-	if err1 == nil {
-		result.BreakStartTime = int64(breakStartTime)
+	breakStartTime, err1 := strconv.Atoi(c.Query("breakStartTime")) // преобразование из string в int
+	if err1 != nil {
+		c.JSON(400, err1.Error())
+		return
 	}
-	if err2 == nil {
-		result.BreakStopTime = int64(breakStopTime)
+	breakStopTime, err2 := strconv.Atoi(c.Query("breakStopTime"))
+	if err2 != nil {
+		c.JSON(400, err2.Error())
+		return
 	}
-	err = stateRepo.Save(result)
+	result, err := Test.EditBreak(dateUnix, int64(breakStartTime), int64(breakStopTime))
 	if err != nil {
 		c.JSON(500, err.Error())
 		return
@@ -208,29 +170,4 @@ func converting(date string) (int64, error) {
 		return 0, err
 	}
 	return t.Unix(), nil // преобразование из типа Time в Unix
-}
-
-func selectData(dateFromUnix int64, dateToUnix int64) ([]*models.State, error) {
-	if dateFromUnix != -1 && dateToUnix != -1 {
-		return stateRepo.GetByDateFromTo(dateFromUnix, dateToUnix)
-	}
-	if dateToUnix != -1 {
-		return stateRepo.GetByDateTo(dateToUnix)
-	}
-	if dateFromUnix != -1 {
-		return stateRepo.GetByDateFrom(dateFromUnix)
-	}
-	return stateRepo.GetAll()
-}
-
-func dateEdit(date string) (*models.State, error) {
-	var err error
-	if date == "" {
-		return nil, err
-	}
-	dateUnix, err := converting(date)
-	if err != nil {
-		return nil, err
-	}
-	return stateRepo.GetByDate(dateUnix)
 }
