@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"github.com/gin-gonic/gin"
 	"log"
+	"os"
 	"strconv"
 	"time"
 	"timeCounter/forms"
@@ -180,4 +181,42 @@ func converting(date string) (int64, error) {
 		return 0, err
 	}
 	return t.Unix(), nil // преобразование из типа Time в Unix
+}
+
+func Export(c *gin.Context) {
+	exportData, errExport := Test.Export()
+	if errExport != nil {
+		c.JSON(400, errExport.Error())
+		return
+	}
+	file, errCreateFile := os.Create("ExportData.csv")
+	if errCreateFile != nil {
+		c.JSON(400, "Unable to create file:")
+		return
+	}
+	defer file.Close()
+	data := "Дата" + "," + "Начало рабочего дня" + "," + "Начало перерыва" + "," + "Окончание перерыва" + "," + "Окончание рабочего дня" + "\r"
+	_, errWriteString := file.WriteString(data)
+	if errWriteString != nil {
+		c.JSON(500, "Unable to write to file")
+		return
+	}
+	for i := 0; i < len(exportData); i++ {
+		date := time.Unix(exportData[i].StartTime, 0).Format("2006-01-02")
+		startTime := time.Unix(exportData[i].StartTime, 0).Format("15:04:05")
+		stopTime := time.Unix(exportData[i].StopTime, 0).Format("15:04:05")
+		breakStartTime := time.Unix(exportData[i].BreakStartTime, 0).Format("15:04:05")
+		breakStopTime := time.Unix(exportData[i].BreakStopTime, 0).Format("15:04:05")
+		data = date + "," + startTime + "," + breakStartTime + "," + breakStopTime + "," + stopTime + "\r"
+		_, errWriteString := file.WriteString(data)
+		if errWriteString != nil {
+			c.JSON(500, "Unable to write to file")
+			return
+		}
+	}
+	c.Header("Content-Description", "File Transfer")
+	c.Header("Content-Transfer-Encoding", "binary")
+	c.Header("Content-Disposition", "attachment; filename="+"Report.csv")
+	c.Header("Content-Type", "application/octet-stream")
+	c.File("ExportData.csv")
 }

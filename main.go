@@ -2,10 +2,11 @@ package main
 
 import (
 	"flag"
+	"log"
+
 	"github.com/gin-gonic/gin"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/spf13/viper"
-	"log"
 	"timeCounter/handlers"
 )
 
@@ -21,11 +22,12 @@ func main() {
 	}
 
 	r := gin.Default()
+	r.GET("/api/info", handlers.Info)
+	r.GET("/api/today", handlers.Today)
+	r.GET("/api/export", handlers.Export)
 	r.POST("/api/start", handlers.Start)
 	r.POST("/api/stop", handlers.Stop)
 	r.POST("/api/edit", handlers.Edit)
-	r.GET("/api/info", handlers.Info)
-	r.GET("/api/today", handlers.Today)
 	r.POST("/api/start-break", handlers.BreakStart)
 	r.POST("/api/stop-break", handlers.BreakStop)
 	r.POST("/api/edit-break", handlers.EditBreak)

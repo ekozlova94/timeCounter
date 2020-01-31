@@ -141,3 +141,7 @@ func (t TimeCounterService) EditBreak(date int64, breakStartTime int64, breakSto
 	}
 	return result, t.Repo.Save(result)
 }
+
+func (t TimeCounterService) Export() ([]*models.State, error) {
+	return t.Repo.GetAll()
+}
