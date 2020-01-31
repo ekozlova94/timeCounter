@@ -3,6 +3,7 @@ package handlers
 import (
 	"database/sql"
 	"github.com/gin-gonic/gin"
+	"io/ioutil"
 	"log"
 	"os"
 	"strconv"
@@ -189,12 +190,27 @@ func Export(c *gin.Context) {
 		c.JSON(400, errExport.Error())
 		return
 	}
-	file, errCreateFile := os.Create("ExportData.csv")
+	/*file, errCreateFile := os.Create("ExportData.csv")
 	if errCreateFile != nil {
 		c.JSON(400, "Unable to create file:")
 		return
 	}
-	defer file.Close()
+	*/
+	file, errCreateTempFile := ioutil.TempFile("ahaha", "ExportData-*.csv")
+	if errCreateTempFile != nil {
+		c.JSON(400, "Unable to create temp file:")
+		return
+	}
+	defer func() {
+		if err := os.Remove(file.Name()); err != nil {
+			log.Println(err.Error())
+		}
+	}()
+	defer func() {
+		if err := file.Close(); err != nil {
+			log.Println(err.Error())
+		}
+	}()
 	data := "Дата" + "," + "Начало рабочего дня" + "," + "Начало перерыва" + "," + "Окончание перерыва" + "," + "Окончание рабочего дня" + "\r"
 	_, errWriteString := file.WriteString(data)
 	if errWriteString != nil {
