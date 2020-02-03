@@ -70,6 +70,9 @@ func (t TimeCounterService) BreakStop(currentTime int64) (*models.State, error) 
 	if result == nil {
 		return nil, errors.New("начало рабочего дня не установлено")
 	}
+	if result.BreakStartTime == 0 {
+		return nil, errors.New("начало перерыва не установлено")
+	}
 	result.BreakStopTime = currentTime
 	err = t.Repo.Save(result)
 	if err != nil {

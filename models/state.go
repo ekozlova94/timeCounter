@@ -1,9 +1,9 @@
 package models
 
 type State struct {
-	Id             int
-	StartTime      int64
-	StopTime       int64
-	BreakStartTime int64
-	BreakStopTime  int64
+	Id             int   `xorm:"pk autoincr 'Id'"`
+	StartTime      int64 `xorm:"'StartTime'"`
+	StopTime       int64 `xorm:"'StopTime'"`
+	BreakStartTime int64 `xorm:"'BreakStartTime'"`
+	BreakStopTime  int64 `xorm:"'BreakStopTime'"`
 }

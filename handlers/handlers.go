@@ -1,8 +1,8 @@
 package handlers
 
 import (
-	"database/sql"
 	"github.com/gin-gonic/gin"
+	"github.com/go-xorm/xorm"
 	"io/ioutil"
 	"log"
 	"os"
@@ -12,21 +12,29 @@ import (
 	"timeCounter/models"
 	"timeCounter/repositories"
 	"timeCounter/services"
+	"xorm.io/core"
 )
 
 var Test services.TimeCounterService
 
 func init() {
-	db, err := sql.Open("sqlite3", "./db.sqlite?_journal=WAL")
+	engine, err := xorm.NewEngine("sqlite3", "./db.sqlite?_journal=WAL")
 	if err != nil {
 		log.Fatal(err)
 	}
-	if err = db.Ping(); err != nil {
+	engine.SetMapper(core.GonicMapper{})
+	/*db, err := sql.Open("sqlite3", "./db.sqlite?_journal=WAL")
+	if err != nil {
+		log.Fatal(err)
+	}*/
+	if err = engine.Ping(); err != nil {
 		log.Fatal(err)
 	}
-
+	if err = engine.Sync2(new(models.State)); err != nil {
+		log.Fatal(err)
+	}
 	stateRepo := repositories.StateRepoImpl{
-		Db: db,
+		Engine: engine,
 	}
 	Test = services.TimeCounterService{
 		Repo: stateRepo,
