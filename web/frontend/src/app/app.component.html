@@ -1,0 +1,61 @@
+<p><a href="http://localhost:5300/api/export">Экспорт</a></p>
+<button (click)="getInfo()">Info</button>
+<button
+  (click)="start()"
+  *ngIf="startButtonIsDisplayed()"
+>
+  Start
+</button>
+<button (click)="startBreak()"
+        *ngIf="startBreakButtonIsDisplayed()"
+>
+  Start break
+</button>
+<button (click)="stopBreak()"
+        *ngIf="stopBreakButtonIsDisplayed()"
+>
+  Stop break
+</button>
+<button (click)="stop()"
+        *ngIf="stopButtonIsDisplayed()"
+>
+  Stop
+</button>
+
+<table>
+  <tr>
+    <th>Дата</th>
+    <th>Начало рабочего дня</th>
+    <th>Начало перерыва</th>
+    <th>Окончание перерыва</th>
+    <th>Окончание рабочего дня</th>
+    <th>Редактирование</th>
+  </tr>
+  <tr *ngFor="let item of infos">
+    <td>{{item.date}}</td>
+    <td>{{item.startTime != 0 ? (item.startTime * 1000 | date:'HH:mm:ss') : '-'}}</td>
+    <td>{{item.breakStartTime != 0 ? (item.breakStartTime * 1000 | date:'HH:mm:ss') : '-'}}</td>
+    <td>{{item.breakStopTime != 0 ? (item.breakStopTime * 1000 | date:'HH:mm:ss') : '-'}}</td>
+    <td>{{item.stopTime != 0 ? (item.stopTime * 1000 | date:'HH:mm:ss') : '-'}}</td>
+    <td>
+      <button (click)="edit(item)" class="edit-b">Edit</button>
+      <button (click)="editBreak(item)" class="edit-b">EditBreak</button>
+    </td>
+  </tr>
+</table>
+
+<div class="edit-block">
+  <!--suppress HtmlFormInputWithoutLabel -->
+  <input [(ngModel)]="editStartTime" placeholder="Начало рабочего дня" type="text">
+  <!--suppress HtmlFormInputWithoutLabel -->
+  <input [(ngModel)]="editStopTime" placeholder="Окончание рабочего дня" type="text">
+  <button (click)="editSave()">SaveEdit</button>
+</div>
+
+<div class="edit-break-block">
+  <!--suppress HtmlFormInputWithoutLabel -->
+  <input [(ngModel)]="editBreakStartTime" placeholder="Начало перерыва" type="text">
+  <!--suppress HtmlFormInputWithoutLabel -->
+  <input [(ngModel)]="editBreakStopTime" placeholder="Окончание перерыва" type="text">
+  <button (click)="editBreakSave()">SaveEditBreak</button>
+</div>

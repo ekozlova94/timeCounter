@@ -1,0 +1,20 @@
+TABLE {
+  width: 800px; /* Ширина таблицы */
+  border-top: 2px solid #000; /* Линия сверху таблицы */
+  border-left: 2px solid #000; /* Линия слева таблицы */
+  border-right: 2px solid #000; /* Линия справа таблицы */
+  border-bottom: 2px solid #000; /* Линия внизу таблицы */
+}
+
+TD, TH {
+  width: 800px; /* Ширина таблицы */
+  padding: 3px; /* Поля вокруг содержимого ячеек */
+  border-left: 1px solid #000; /* Линия слева таблицы */
+  border-right: 1px solid #000; /* Линия справа таблицы */
+  border-bottom: 1px solid #000; /* Линия внизу таблицы */
+}
+
+TH {
+  text-align: left; /* Выравнивание текста по левому краю */
+  border-bottom: 1px solid #000; /* Линия под верхним заголовком */
+}
