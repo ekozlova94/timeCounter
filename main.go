@@ -3,7 +3,9 @@ package main
 import (
 	"flag"
 	"log"
+	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/spf13/viper"
@@ -22,6 +24,14 @@ func main() {
 	}
 
 	r := gin.Default()
+	r.Use(cors.New(cors.Config{
+		AllowOrigins:     viper.GetStringSlice("origins"),
+		AllowMethods:     []string{"PUT", "PATCH"},
+		AllowHeaders:     []string{"Origin"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
 	r.GET("/api/info", handlers.Info)
 	r.GET("/api/today", handlers.Today)
 	r.GET("/api/export", handlers.Export)

@@ -3,8 +3,8 @@ package repositories
 import (
 	"errors"
 	"fmt"
+
 	"github.com/go-xorm/xorm"
-	"log"
 	"timeCounter/models"
 )
 
@@ -60,11 +60,6 @@ func (o StateRepoImpl) GetByDateFromTo(dateFrom int64, dateTo int64) ([]*models.
 	if has {
 		return nil, err
 	}
-	defer func() {
-		if err := o.Engine.Close(); err != nil {
-			log.Println(err.Error())
-		}
-	}()
 	return s, nil
 }
 
@@ -82,11 +77,6 @@ func (o StateRepoImpl) GetByDateFrom(dateFrom int64) ([]*models.State, error) {
 	if has {
 		return nil, err
 	}
-	defer func() {
-		if err := o.Engine.Close(); err != nil {
-			log.Println(err.Error())
-		}
-	}()
 	return s, nil
 }
 
@@ -104,25 +94,15 @@ func (o StateRepoImpl) GetByDateTo(dateTo int64) ([]*models.State, error) {
 	if has {
 		return nil, err
 	}
-	defer func() {
-		if err := o.Engine.Close(); err != nil {
-			log.Println(err.Error())
-		}
-	}()
 	return s, nil
 }
 
 func (o StateRepoImpl) GetAll() ([]*models.State, error) {
 	var s = make([]*models.State, 0)
-	err := o.Engine.Find(s)
+	err := o.Engine.Find(&s)
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		if err := o.Engine.Close(); err != nil {
-			log.Println(err.Error())
-		}
-	}()
 	return s, nil
 }
 

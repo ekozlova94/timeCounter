@@ -20,11 +20,11 @@ func (t TimeCounterService) Start(currentTime int64) (*models.State, error) {
 		s.StartTime = currentTime
 		err := t.Repo.Save(&s)
 		if err != nil {
-			return nil, errors.New("не удалось установить начало рабочего дня")
+			return nil, errors.New("failed to set start of work day")
 		}
 		return &s, nil
 	}
-	return nil, errors.New("начало рабочего дня уже установлено")
+	return nil, errors.New("the beginning of the working day is already set")
 }
 
 func (t TimeCounterService) BreakStart(currentTime int64) (*models.State, error) {
@@ -36,14 +36,14 @@ func (t TimeCounterService) BreakStart(currentTime int64) (*models.State, error)
 		result.BreakStartTime = currentTime
 		err := t.Repo.Save(result)
 		if err != nil {
-			return nil, errors.New("не удалось установить начало перерыва")
+			return nil, errors.New("failed to set break start")
 		}
 		return result, nil
 	}
 	if result != nil && result.BreakStartTime != 0 {
-		return nil, errors.New("начало перерыва уже установлено")
+		return nil, errors.New("break start already set")
 	}
-	return nil, errors.New("начало рабочего дня не установлено")
+	return nil, errors.New("the beginning of the working day is not found")
 }
 
 func (t TimeCounterService) Stop(currentTime int64) (*models.State, error) {
@@ -52,7 +52,7 @@ func (t TimeCounterService) Stop(currentTime int64) (*models.State, error) {
 		return nil, err
 	}
 	if result == nil {
-		return nil, errors.New("начало рабочего дня не установлено")
+		return nil, errors.New("the beginning of the working day is not found")
 	}
 	result.StopTime = currentTime
 	err = t.Repo.Save(result)
@@ -68,10 +68,10 @@ func (t TimeCounterService) BreakStop(currentTime int64) (*models.State, error) 
 		return nil, err
 	}
 	if result == nil {
-		return nil, errors.New("начало рабочего дня не установлено")
+		return nil, errors.New("the beginning of the working day is not found")
 	}
 	if result.BreakStartTime == 0 {
-		return nil, errors.New("начало перерыва не установлено")
+		return nil, errors.New("break start not found")
 	}
 	result.BreakStopTime = currentTime
 	err = t.Repo.Save(result)
@@ -87,7 +87,7 @@ func (t TimeCounterService) Today(currentTime int64) (*models.State, error) {
 		return nil, err
 	}
 	if result == nil {
-		return nil, errors.New("записи на сегодня нет")
+		return nil, errors.New("no entries for today")
 	}
 	return result, nil
 }
@@ -111,14 +111,14 @@ func (t TimeCounterService) Edit(date int64, startTime int64, stopTime int64) (*
 		return nil, err
 	}
 	if startTime == 0 && stopTime == 0 {
-		return nil, errors.New("не указано ни одного параметра")
+		return nil, errors.New("no parameters specified")
 	}
 	if startTime != 0 && startTime >= date && startTime < (date+86400) {
 		result.StartTime = startTime
 	}
 	if stopTime != 0 && stopTime >= date && stopTime < (date+86400) {
 		if stopTime <= startTime && startTime != 0 {
-			return nil, errors.New("окончание рабочего дня не может быть раньше начала")
+			return nil, errors.New("the end of the working day cannot be earlier than the beginning")
 		}
 		result.StopTime = stopTime
 	}
@@ -131,20 +131,20 @@ func (t TimeCounterService) EditBreak(date int64, breakStartTime int64, breakSto
 		return nil, err
 	}
 	if breakStartTime == 0 && breakStopTime == 0 {
-		return nil, errors.New("не указано ни одного параметра")
+		return nil, errors.New("no parameters specified")
 	}
 	if breakStartTime != 0 && breakStartTime >= date && breakStartTime <= (date+86400) {
 		result.BreakStartTime = breakStartTime
 	}
 	if breakStopTime != 0 && breakStopTime >= date && breakStopTime <= (date+86400) {
 		if breakStopTime <= breakStartTime && breakStartTime != 0 {
-			return nil, errors.New("окончание рабочего дня не может быть раньше начала")
+			return nil, errors.New("the end of the working day cannot be earlier than the beginning")
 		}
 		result.BreakStopTime = breakStopTime
 	}
 	return result, t.Repo.Save(result)
 }
 
-func (t TimeCounterService) Export() ([]*models.State, error) {
+func (t TimeCounterService) States() ([]*models.State, error) {
 	return t.Repo.GetAll()
 }

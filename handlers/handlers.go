@@ -1,13 +1,14 @@
 package handlers
 
 import (
-	"github.com/gin-gonic/gin"
-	"github.com/go-xorm/xorm"
 	"io/ioutil"
 	"log"
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/go-xorm/xorm"
 	"timeCounter/forms"
 	"timeCounter/models"
 	"timeCounter/repositories"
@@ -15,7 +16,7 @@ import (
 	"xorm.io/core"
 )
 
-var Test services.TimeCounterService
+var TimeCounterService services.TimeCounterService
 
 func init() {
 	engine, err := xorm.NewEngine("sqlite3", "./db.sqlite?_journal=WAL")
@@ -36,14 +37,14 @@ func init() {
 	stateRepo := repositories.StateRepoImpl{
 		Engine: engine,
 	}
-	Test = services.TimeCounterService{
+	TimeCounterService = services.TimeCounterService{
 		Repo: stateRepo,
 	}
 }
 
 func Start(c *gin.Context) {
 	currentTime := time.Now().Unix()
-	result, err := Test.Start(currentTime)
+	result, err := TimeCounterService.Start(currentTime)
 	if err != nil {
 		c.JSON(500, err.Error())
 		return
@@ -53,7 +54,7 @@ func Start(c *gin.Context) {
 
 func BreakStart(c *gin.Context) {
 	currentTime := time.Now().Unix()
-	result, err := Test.BreakStart(currentTime)
+	result, err := TimeCounterService.BreakStart(currentTime)
 	if err != nil {
 		c.JSON(500, err.Error())
 		return
@@ -63,7 +64,7 @@ func BreakStart(c *gin.Context) {
 
 func Stop(c *gin.Context) {
 	currentTime := time.Now().Unix()
-	result, err := Test.Stop(currentTime)
+	result, err := TimeCounterService.Stop(currentTime)
 	if err != nil {
 		c.JSON(500, err.Error())
 		return
@@ -73,7 +74,7 @@ func Stop(c *gin.Context) {
 
 func BreakStop(c *gin.Context) {
 	currentTime := time.Now().Unix()
-	result, err := Test.BreakStop(currentTime)
+	result, err := TimeCounterService.BreakStop(currentTime)
 	if err != nil {
 		c.JSON(500, err.Error())
 		return
@@ -83,12 +84,12 @@ func BreakStop(c *gin.Context) {
 
 func Today(c *gin.Context) {
 	currentTime := time.Now().Unix()
-	result, err := Test.Today(currentTime)
+	result, err := TimeCounterService.Today(currentTime)
 	if err != nil {
 		c.JSON(500, err.Error())
 		return
 	}
-	c.JSON(200, result)
+	c.JSON(200, forms.NewInfoResponseForm(result))
 }
 
 func Info(c *gin.Context) {
@@ -110,7 +111,7 @@ func Info(c *gin.Context) {
 		}
 	}
 	var sts []*models.State
-	sts, err = Test.Info(dateFromUnix, dateToUnix)
+	sts, err = TimeCounterService.Info(dateFromUnix, dateToUnix)
 	if err != nil {
 		c.JSON(500, err.Error())
 		return
@@ -129,7 +130,7 @@ func Info(c *gin.Context) {
 func Edit(c *gin.Context) {
 	date := c.Query("date")
 	if date == "" {
-		c.JSON(500, "Запись не найдена")
+		c.JSON(500, "record not found")
 		return
 	}
 	dateUnix, err := converting(date)
@@ -147,7 +148,7 @@ func Edit(c *gin.Context) {
 		c.JSON(400, err2.Error())
 		return
 	}
-	result, err := Test.Edit(dateUnix, int64(startTime), int64(stopTime))
+	result, err := TimeCounterService.Edit(dateUnix, int64(startTime), int64(stopTime))
 	if err != nil {
 		c.JSON(500, err.Error())
 		return
@@ -158,7 +159,7 @@ func Edit(c *gin.Context) {
 func EditBreak(c *gin.Context) {
 	date := c.Query("date")
 	if date == "" {
-		c.JSON(500, "Запись не найдена")
+		c.JSON(500, "record not found")
 		return
 	}
 	dateUnix, err := converting(date)
@@ -176,7 +177,7 @@ func EditBreak(c *gin.Context) {
 		c.JSON(400, err2.Error())
 		return
 	}
-	result, err := Test.EditBreak(dateUnix, int64(breakStartTime), int64(breakStopTime))
+	result, err := TimeCounterService.EditBreak(dateUnix, int64(breakStartTime), int64(breakStopTime))
 	if err != nil {
 		c.JSON(500, err.Error())
 		return
@@ -193,18 +194,12 @@ func converting(date string) (int64, error) {
 }
 
 func Export(c *gin.Context) {
-	exportData, errExport := Test.Export()
+	exportData, errExport := TimeCounterService.States()
 	if errExport != nil {
 		c.JSON(400, errExport.Error())
 		return
 	}
-	/*file, errCreateFile := os.Create("ExportData.csv")
-	if errCreateFile != nil {
-		c.JSON(400, "Unable to create file:")
-		return
-	}
-	*/
-	file, errCreateTempFile := ioutil.TempFile("ahaha", "ExportData-*.csv")
+	file, errCreateTempFile := ioutil.TempFile("temp", "TempFile-*.csv")
 	if errCreateTempFile != nil {
 		c.JSON(400, "Unable to create temp file:")
 		return
@@ -238,9 +233,10 @@ func Export(c *gin.Context) {
 			return
 		}
 	}
+
 	c.Header("Content-Description", "File Transfer")
 	c.Header("Content-Transfer-Encoding", "binary")
 	c.Header("Content-Disposition", "attachment; filename="+"Report.csv")
 	c.Header("Content-Type", "application/octet-stream")
-	c.File("ExportData.csv")
+	c.File(file.Name())
 }

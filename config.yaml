@@ -1,2 +1,5 @@
 server:
-  port: 5000
+  port: 5300
+origins:
+  - "http://localhost:5000"
+  - "http://localhost:4200"

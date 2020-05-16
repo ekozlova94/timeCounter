@@ -6,13 +6,12 @@ import (
 )
 
 type InfoResponseForm struct {
-	ID        int    `json:"id"`
-	Date      string `json:"date"`
-	StartTime int64  `json:"startTime"`
-	StopTime  int64  `json:"stopTime"`
-	// переименовать
-	BreakStartTime int64 `json:"breakStartTime"`
-	BreakStopTime  int64 `json:"breakStopTime"`
+	ID             int    `json:"id"`
+	Date           string `json:"date"`
+	StartTime      int64  `json:"startTime"`
+	StopTime       int64  `json:"stopTime"`
+	BreakStartTime int64  `json:"breakStartTime"`
+	BreakStopTime  int64  `json:"breakStopTime"`
 }
 
 func NewInfoResponseForm(c *models.State) *InfoResponseForm {
